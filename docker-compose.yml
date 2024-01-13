@@ -1,0 +1,16 @@
+version: '3'
+services:
+  mongodb:
+    image: mongo:6.0-focal   # Use the latest MongoDB LTS image
+    container_name: db-mongo
+    ports:
+      - "27017:27017"     # Map container port 27017 to host port 27017
+    volumes:
+      - mongodb_data:/data/db
+    restart: always
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=root
+      - MONGO_INITDB_ROOT_PASSWORD=root-e3f9dedc-30d9-4447-8f31-efbe525a61fd
+
+volumes:
+  mongodb_data:
