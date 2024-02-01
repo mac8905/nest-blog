@@ -2,6 +2,7 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -58,11 +59,48 @@ export class UsersService {
     return findUser._doc;
   }
 
-  update(id: string, updateUserDto: UpdateUserDto) {
-    return `This action updates a #${id} user`;
+  async update(id: string, updateUserDto: UpdateUserDto) {
+    const { username, isAdmin } = updateUserDto;
+    const userToUpdate = await this.userModel.findById(id).exec();
+
+    if (!userToUpdate) {
+      throw new NotFoundException('Usuario no encontrado');
+    }
+
+    if (!userToUpdate.isAdmin) {
+      throw new UnauthorizedException(
+        'No tienes permisos para actualizar este usuario',
+      );
+    }
+
+    if (username) {
+      userToUpdate.username = username;
+    }
+
+    if (isAdmin !== undefined) {
+      userToUpdate.isAdmin = isAdmin;
+    }
+
+    try {
+      return await userToUpdate.save();
+    } catch (error) {
+      throw new Error('Error al actualizar el usuario');
+    }
   }
 
-  remove(id: string) {
-    return `This action removes a #${id} user`;
+  async remove(id: string) {
+    const requestingUser = await this.userModel.findById(id).exec();
+
+    if (!requestingUser || !requestingUser.isAdmin) {
+      throw new UnauthorizedException(
+        'No tienes permisos para eliminar este usuario',
+      );
+    }
+
+    const result = await this.userModel.findByIdAndDelete(id).exec();
+
+    if (!result) {
+      throw new NotFoundException('Usuario no encontrado');
+    }
   }
 }
