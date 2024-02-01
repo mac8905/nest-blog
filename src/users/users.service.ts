@@ -1,4 +1,8 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { InjectModel } from '@nestjs/mongoose';
@@ -12,7 +16,7 @@ export class UsersService {
   async create(createUserDto: CreateUserDto) {
     const { username, password, isAdmin } = createUserDto;
 
-    if (this.findOne(username)) {
+    if (await this.findOne(username)) {
       throw new ConflictException('El nombre de usuario ya está en uso');
     }
 
@@ -29,12 +33,29 @@ export class UsersService {
     }
   }
 
-  findAll() {
-    return `This action returns all users`;
+  async findAll() {
+    try {
+      return await this.userModel.find().exec();
+    } catch (error) {
+      throw new Error('Error al obtener la lista de usuarios');
+    }
   }
 
-  findOne(field: string) {
-    return { username: 'root', password: 'root' };
+  async findOne(field: string) {
+    let findUser;
+    const isObjectId = /^[0-9a-fA-F]{24}$/.test(field);
+
+    if (isObjectId) {
+      findUser = await this.userModel.findById(field).exec();
+    } else {
+      findUser = await this.userModel.findOne({ username: field }).exec();
+    }
+
+    if (!findUser) {
+      throw new NotFoundException('Usuario no encontrado');
+    }
+
+    return findUser._doc;
   }
 
   update(id: string, updateUserDto: UpdateUserDto) {
